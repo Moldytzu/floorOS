@@ -26,7 +26,10 @@ override INTERNALCFLAGS :=   \
 	-mno-sse2            \
 	-mno-red-zone        \
 	-mcmodel=kernel      \
+	-fsanitize=address   \
+	-static-libasan      \
 	-MMD
+
 
 override INTERNALLDFLAGS :=    \
 	-Tlinker.ld            \

@@ -6,6 +6,8 @@ extern "C"
 
 typedef unsigned short int uint16_t;
 typedef unsigned char uint8_t;
+typedef unsigned long uint64_t;
+
 
 typedef enum vagColor{
     vga_color_black = 0,
@@ -24,20 +26,26 @@ typedef enum vagColor{
     vga_color_pink = 13,
     vga_color_yellow = 14,
     vga_color_white = 15,
-};
+} vagColor_t;
 
-uint8_t calculate_entry_color_byte(enum vagColor fc,enum vagColor bc);
+uint8_t calculate_entry_color_byte(vagColor_t fc, vagColor_t bc);
 
 
 uint16_t create_vga_entry(unsigned char character, uint8_t color);
 
+
 void clear_screen();
+
 
 int putChar(uint16_t vga_word, int place);
 
+
 int printf(char *message, int line);
+
 
 int testPrintf(char* str);
 
-char* itoa(int value, char* buffer);
+
+char* itoa(uint64_t value, char* buffer);
+
 #endif

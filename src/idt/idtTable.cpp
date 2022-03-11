@@ -11,25 +11,23 @@ idtTable::idtTable(){
 
 
 void idtTable::initIDT(){
-    for(int i = 0; i<256; i++){
-        createNewEntry(i, (uint64_t)isr_stub_table[i], 0x8E, 0x08, 0);
+    for(int i = 0; i<=31; i++){
+        createNewEntry(i, (uint64_t)isr_stub_table[i], 0x8e, 0x08, 0);
     }
-    while(1);
 }
 
 
 void idtTable::createNewEntry(unsigned int int_vector, uint64_t isr_addr, uint8_t attributes, uint16_t cs_selector, uint8_t ist){
-    if (int_vector > 256){
+    if (int_vector > 255){
         return;
     }
 
-    printf(itoa((int)int_vector, ""), 1);
-    idt_object_table[int_vector] = idtEntry(isr_addr, cs_selector, attributes, ist);
+    idt_object_table[int_vector].initEntry(isr_addr, cs_selector, attributes, ist);
 }
 
 
 void idtTable::convertObjectToStruct(){
-    for(int i=0; i<255; i++){
+    for(int i=0; i<=255; i++){
         idt_object_table[i].getEntry(&idt_table[i]);
     }
 }
@@ -53,7 +51,6 @@ void idtTable::activateInterrupts(){
     loadIDT();
     activatePIC(0, 0);
     asm("sti");
-    printf("interrupt sti", 10);
 }
 
 

@@ -45,20 +45,38 @@ void _start(struct stivale2_struct *stivale2_struct) {
     //printf("hello, stivale!", 10);
     //idtTable idt = idtTable();
     struct stivale2_struct_tag_memmap* memmap = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
+    struct stivale2_struct_tag_kernel_base_address* base_address = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
+    struct stivale2_struct_tag_pmrs* pmrs = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_PMRS_ID);
     pageFrameAllocator allocator = pageFrameAllocator(memmap);
-    paging pageManager = paging(&allocator);
+    paging pageManager = paging(&allocator, base_address, pmrs);
     uintptr_t ptr1;
-    int page_id = allocator.getPageFrame(&ptr1);
-    allocator.freePageFrame(page_id);
-    printf(itoa(ptr1, ""), 1);
-    allocator.getPageFrame(&ptr1);
-    printf(itoa(ptr1, ""), 2);
-    allocator.getPageFrame(&ptr1);
-    printf(itoa(ptr1, ""), 3);
+    //pageManager.mapPage(0x0, 0x0);
+    //pageManager.mapPage(0xffffffff80202088, 0xffffffff80202088);
 
-    pageManager.mapPage(0x10000, 0xc00000);
-    pageManager.mapPage(0x20000, 0xd00000);
-    while(1);
+    for(auto i = 0; i < memmap->entries; i++){
+        for(auto j = 0; j < memmap->memmap[i].length; j += 4096){
+            uint64_t addr = memmap->memmap[i].base + j;
+            pageManager.mapPage(addr, addr, 3);
+        }
+    }
+    
+
+    for(auto i = 0; i < pmrs->entries; i++){
+        for(auto j = 0; j < pmrs->pmrs[i].length; j += 4096){
+            uint64_t addr = pmrs->pmrs[i].base + j;
+            pageManager.mapPage(addr, addr, 3);
+        }
+    }
+
+
+    //printf(itoa(memmap->entries, ""), 21);
+
+    //idtTable idt = idtTable();
+    //idt.activateInterrupts();
+    pageManager.mapPage(0x3000, 0x300C, 3);
+    printf(itoa(pageManager.translateAddr(0xffffffff80202027), ""), 20);
+    pageManager.initCR3();
     asm("hlt");
 }
 
+//@TODO: do the correct paging of the kernel according to stivale2 specifications.

@@ -1,6 +1,27 @@
 #pragma once
 
-#include "paging.h"
+#include "../common/common.h"
+
+
+typedef enum pageFlags{
+    present,
+    read_write,
+    user_supervisor,
+    write_through,
+    cache_disable,
+    accessed,
+    larger_pages = 7,
+    custom0 = 9,
+    cutsom1 = 10,
+    custom2 = 11,
+    NX = 63
+} pageFlags_t;
+
+
+typedef enum flagState{
+    off,
+    on
+} flagState_t;
 
 
 class pageMapEntry{
@@ -16,5 +37,5 @@ class pageMapEntry{
 
         void setFlag(pageFlags_t flag, flagState_t state);
 
-        int getFlag(pageFlags_t flag);
+        uint64_t getFlag(pageFlags_t flag);
 };

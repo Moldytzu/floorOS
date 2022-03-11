@@ -1,12 +1,16 @@
 #include "idtEntry.h"
 
-idtEntry::idtEntry(uint64_t isr_addr, uint16_t cs_selector, uint8_t attributes, uint8_t ist) : cs_selector(cs_selector), attributes(attributes), ist(ist){
-   initEntry(isr_addr);
+idtEntry::idtEntry(){
+    isr_addr_low = 0;
+    isr_addr_mid = 0;
+    isr_addr_high = 0;
+    cs_selector = 0;
+    attributes = 0;
+    ist = 0;
 }
 
 
-void idtEntry::initEntry(uint64_t isr_addr){
-    printf(itoa(cs_selector, ""), 19);
+void idtEntry::initEntry(uint64_t isr_addr, uint16_t cs_selector, uint8_t attributes, uint8_t ist){
     initIsrAddr(isr_addr);
     this->cs_selector = cs_selector;
     this->attributes = attributes;

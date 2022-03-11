@@ -4,27 +4,7 @@
 #include "pageFrameAllocator.h"
 #include "memory.h"
 #include "pageMapEntry.h"
-
-
-typedef enum pageFlags{
-    present,
-    read_write,
-    user_supervisor,
-    write_through,
-    cache_disable,
-    accessed,
-    larger_pages = 7,
-    custom0 = 9,
-    cutsom1 = 10,
-    custom2 = 11,
-    NX = 63
-} pageFlags_t;
-
-
-typedef enum flagState{
-    off,
-    on
-} flagState_t;
+#include "../common/stivale2.h"
 
 
 typedef struct pageMapLevel{
@@ -32,21 +12,36 @@ typedef struct pageMapLevel{
 } __attribute__((aligned(0x1000))) pageMapLevel_t;
 
 
+typedef struct pageMapIndexes{
+    unsigned int pml4_index;
+    unsigned int pdp_index;
+    unsigned int pd_index;
+    unsigned int pt_index;
+} pageMapIndexes_t;
+
+
 class paging{
     private:
         pageFrameAllocator* pageAllocator;
-        pageMapLevel_t pml4;
+        uint64_t pml4_phys_addr;
+        pageMapLevel_t* pml4;
+
 
     private:
-        int initPaging();
+        int initPaging(stivale2_struct_tag_kernel_base_address* kernel_start_address, stivale2_struct_tag_pmrs* pmrs);
 
+        void identityPagingInit(stivale2_struct_tag_kernel_base_address* kernel_base_address, stivale2_struct_tag_pmrs* pmrs);
+
+        void parsePageMapIndexes(uint64_t virtAddr, unsigned int* indexes);
+
+        pageMapLevel_t* getNextPagingLevel(pageMapLevel_t* cur_level , unsigned int entry_index);
 
     public:
-        paging(pageFrameAllocator* pageAllocator);
+        paging(pageFrameAllocator* pageAllocator, stivale2_struct_tag_kernel_base_address* kernel_base_addr_struct, stivale2_struct_tag_pmrs* pmrs);
 
-
-        int mapPage(uint64_t virtAddr, uint64_t physAddr);
-
+        int mapPage(uint64_t virtAddr, uint64_t physAddr, uint64_t flags);
 
         int translateAddr(uint64_t virtAddr);
+
+        void initCR3();
 };

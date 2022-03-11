@@ -14,93 +14,144 @@ void *memset(void *bufptr, int value, unsigned int size)
 }
 
 
-paging::paging(pageFrameAllocator* pageAllocator) : pageAllocator(pageAllocator){
-    initPaging();
+paging::paging(pageFrameAllocator* pageAllocator, stivale2_struct_tag_kernel_base_address* kernel_base_addr_struct, stivale2_struct_tag_pmrs* pmrs) : pageAllocator(pageAllocator){
+    initPaging(kernel_base_addr_struct, pmrs);
 }
 
 
-int paging::initPaging(){
-    return 0;
-}
-
-int paging::mapPage(uint64_t virtAddr, uint64_t physAddr){
-    //map the page directory pointer in the index that is described by the the integer between the 39 bit to  the 47 bit (9 bits : 0x1ff = 9)
-    pageMapEntry pdp = pml4.entries[virtAddr >> 39 & 0x1FF];
-
-    pageMapLevel_t* pdpe;
-    uint64_t page_alloc;
-    //check if its already have been created
-    if(pdp.getFlag(present) == 0){
-        //if not, allocate a page for the entry and creates an object for it init the object and storing it
-        //in the correct index in the page directory pointer
-        uint64_t pdp_page;
-        pageAllocator->getPageFrame(&pdp_page);
-        pageMapEntry entry = pageMapEntry();
-        entry.setAddress(pdp_page);
-        entry.setFlag(pageFlags_t::present, flagState_t::on);
-        entry.setFlag(pageFlags_t::read_write, flagState_t::on);
-        memset((void*)pdp_page, 0x1000, 0);
-        pml4.entries[virtAddr >> 39 & 0x1FF] = entry;
-        pdpe = (pageMapLevel_t*)entry.getAddress();
-        delete &entry;
-    }
-
-    else{
-        //if the page direcotry pointer have already been created, it gets its address and continue in the mapping.
-        //the pdpe variable is used all over the function, not only for the pdp, but for all of the different maps.
-        //every time we use the pdpe to continue our recursive mapping
-        pdpe = (pageMapLevel_t*)pml4.entries[virtAddr >> 39 & 0x1FF].getAddress();
-    }
-
-    //the same thing again for the page directory
-    if(pdpe->entries[virtAddr >> 30 & 0x1FF].getFlag(pageFlags_t::present) == 0){
-        pageAllocator->getPageFrame(&page_alloc);
-        pageMapEntry entry = pageMapEntry();
-        entry.setAddress(page_alloc);
-        entry.setFlag(pageFlags_t::present, flagState_t::on);
-        entry.setFlag(pageFlags_t::read_write, flagState_t::on);
-        memset((void*)page_alloc, 0x1000, 0);
-        pdpe->entries[virtAddr >> 30 & 0x1FF] = entry;
-        delete &entry;
-    }
-
-    else{
-        pdpe = (pageMapLevel_t*)pdpe->entries[virtAddr >> 30 & 0x1FF].getAddress();
-    }
-
-    //same thing again for the page table
-    if(pdpe->entries[virtAddr >> 21 & 0x1FF].getFlag(pageFlags_t::present) == 0){
-        pageAllocator->getPageFrame(&page_alloc);
-        pageMapEntry entry = pageMapEntry();
-        entry.setAddress(page_alloc);
-        entry.setFlag(pageFlags_t::present, flagState_t::on);
-        entry.setFlag(pageFlags_t::read_write, flagState_t::on);
-        memset((void*)page_alloc, 0x1000, 0);
-        pdpe->entries[virtAddr >> 21 & 0x1FF] = entry;
-        delete &entry;
-    }
-
-    else{
-        pdpe = (pageMapLevel_t*)pdpe->entries[virtAddr >> 21 & 0x1FF].getAddress();
-    }
-
-    //and now, set the last entry to the physical address.
-    pdpe->entries[virtAddr >> 9 & 0x1FF].setAddress(physAddr);
-    pageMapEntry entry = pageMapEntry();
-    entry.setAddress(physAddr);
-    entry.setFlag(pageFlags_t::present, flagState_t::on);
-    entry.setFlag(pageFlags_t::read_write, flagState_t::on);
-    pdpe->entries[virtAddr >> 9 & 0x1FF] = entry;
+int paging::initPaging(stivale2_struct_tag_kernel_base_address* kernel_base_addr_struct, stivale2_struct_tag_pmrs* pmrs){
+    pageAllocator->getPageFrame(&pml4_phys_addr);
+    pml4 = reinterpret_cast<pageMapLevel_t*>(pml4_phys_addr);
+    memset((void*)pml4_phys_addr, 0, 0x1000);
+    //identityPagingInit(kernel_base_addr_struct, pmrs);
     return 0;
 }
 
 
-int paging::translateAddr(uint64_t virtAddr);
-    pageMapEntry pdp = pml4.entries[virtAddr >> 39 & 0x1FF];
-    pageMapLevel_t* pd = (pageMapLevel_t*)pdp.getAddress();
-    pd = (pageMapLevel_t*)pd->entries[virtAddr >> 30 & 0x1FF].getAddress();
-    pd = (pageMapLevel_t*)pd->entries[virtAddr >> 21 & 0x1FF].getAddress();
-    pdp = pd->entries[virtAddr >> 9 & 0x1FF];
-    return pdp.getAddress();
+void paging::parsePageMapIndexes(uint64_t virtAddr, unsigned int* indexes){    
+    for(int i=0; i < 4; i++){
+        indexes[i] = ((virtAddr & ((uintptr_t)0x1ff << 39 - 9 * i)) >> 39 - 9 * i);
+    }
 }
 
+
+pageMapLevel_t* paging::getNextPagingLevel(pageMapLevel_t* cur_level, unsigned int entry_index){
+    if(cur_level->entries[entry_index].getFlag(pageFlags_t::present) == flagState_t::off){
+        uint64_t page_ptr;
+        pageAllocator->getPageFrame(&page_ptr);
+        memset((void*)page_ptr, 0, 0x1000);
+        pageMapEntry entry = pageMapEntry();
+        entry.setAddress(page_ptr);
+        entry.setFlag(pageFlags_t::present, flagState_t::on);
+        entry.setFlag(pageFlags_t::read_write, flagState_t::on);
+        return reinterpret_cast<pageMapLevel_t*>(page_ptr);
+    }
+    else{
+        auto entry = reinterpret_cast<pageMapLevel_t*>(cur_level->entries[entry_index].getAddress());
+        return entry;
+    }
+}
+
+/*int paging::mapPage(uint64_t virtAddr, uint64_t physAddr){
+    unsigned int indexes[4];
+    parsePageMapIndexes(virtAddr, indexes);
+
+    pageMapLevel_t* table = reinterpret_cast<pageMapLevel_t*>(pml4_phys_addr);
+    for(int i = 0; i < 4; i++){
+        auto entry = &table->entries[indexes[i]];
+        if(entry->getFlag(pageFlags_t::present) == flagState_t::off){
+            uint64_t page_ptr;
+            pageAllocator->getPageFrame(&page_ptr);
+            entry->setAddress(page_ptr);
+            //entry->setFlag(pageFlags_t::present, flagState_t::on);
+            //entry->setFlag(pageFlags_t::read_write, flagState_t::on);
+            memset((void*)page_ptr, 0, 0x1000);
+            table = reinterpret_cast<pageMapLevel_t*>(page_ptr);
+        }
+        else{
+            printf("page!", 6);
+            table = reinterpret_cast<pageMapLevel_t*>(entry->getAddress());
+        }
+    }
+    
+    
+    table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].setAddress(physAddr);
+    //table->entries[((virtAddr & ((uintptr_t)0xFF << 12)) >> 12)].setFlag(pageFlags_t::present, flagState_t::on);
+    //table->entries[((virtAddr & ((uintptr_t)0xFF << 12)) >> 12)].setFlag(pageFlags_t::read_write, flagState_t::on);
+    return 0;
+}*/
+
+
+int paging::mapPage(uint64_t virtAddr, uint64_t physAddr, uint64_t flags){
+    unsigned int indexes[4];
+    parsePageMapIndexes(virtAddr, indexes);
+
+    pageMapLevel_t* table = reinterpret_cast<pageMapLevel_t*>(pml4_phys_addr);
+    for(int i = 0; i < 3; i++){
+        auto entry = &table->entries[indexes[i]];
+        if(entry->getFlag(pageFlags_t::present) == flagState_t::off){
+            uint64_t page_ptr;
+            pageAllocator->getPageFrame(&page_ptr);
+            entry->setAddress(page_ptr | flags);
+            //entry->setFlag(pageFlags_t::present, flagState_t::on);
+            //entry->setFlag(pageFlags_t::read_write, flagState_t::on);
+            memset((void*)page_ptr, 0, 0x1000);
+            table = reinterpret_cast<pageMapLevel_t*>(page_ptr);
+        }
+        else{
+            table = reinterpret_cast<pageMapLevel_t*>(entry->getAddress());
+        }
+    }
+    
+    
+    table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].setAddress(physAddr | 3);
+    //table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].setFlag(pageFlags_t::present, flagState_t::on);
+    //table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].setFlag(pageFlags_t::read_write, flagState_t::on);
+    return table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].getAddress();
+}
+
+
+void paging::identityPagingInit(stivale2_struct_tag_kernel_base_address* kernel_base_address, stivale2_struct_tag_pmrs* pmrs){
+    uint64_t kernel_base_phys = kernel_base_address->physical_base_address;
+    uint64_t kernel_base_virt = kernel_base_address->virtual_base_address;
+
+    mapPage(kernel_base_phys, kernel_base_virt, 3);
+    /*for(uint64_t i = 0; i <= 0x100000000; i += 4096){
+        printf("start id mapping", 8);
+        mapPage(kernel_base_phys + i, kernel_base_phys + i);
+    }*/
+
+    for(uint64_t i = 0; i <= 0x10000000; i += 4096){
+        uint64_t addr = 0xffffffff80200000 + i;
+        mapPage(addr, addr, 3);
+    }
+
+    printf("finish identity paging", 20);
+}
+
+int paging::translateAddr(uint64_t virtAddr){
+    unsigned int indexes[4];
+    parsePageMapIndexes(virtAddr, indexes);
+
+    pageMapLevel_t* table = reinterpret_cast<pageMapLevel_t*>(pml4_phys_addr);
+    for(int i = 0; i < 3; i++){
+        auto entry = &table->entries[indexes[i]];
+        if(entry->getFlag(pageFlags_t::present) == flagState_t::off){
+            return -1;
+        }
+        else{
+            printf(itoa(entry->getAddress(), ""), 10+i);
+            table = reinterpret_cast<pageMapLevel_t*>(entry->getAddress());
+        }
+    }
+    
+    return table->entries[((virtAddr & ((uintptr_t)0x1FF << 12)) >> 12)].getAddress();
+}
+
+
+void paging::initCR3(){
+    __asm__ volatile("mov %0, %%cr3" : : "r" (pml4_phys_addr) );
+}
+
+
+//check why the paging is crashing and getting a page fault when load the address to CR3

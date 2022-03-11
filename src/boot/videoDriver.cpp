@@ -72,13 +72,13 @@ char* reverse(char *buffer, int i, int j)
     return buffer;
 }
  
-char* itoa(int value, char* buffer){
-    int n = value;
+char* itoa(uint64_t value, char* buffer){
+    uint64_t n = value;
  
-    int i = 0;
+    uint64_t i = 0;
     while (n)
     {
-        int r = n % 10;
+        uint64_t r = n % 10;
  
         if (r >= 10) {
             buffer[i++] = 65 + (r - 10);

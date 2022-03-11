@@ -32,9 +32,9 @@ class idtEntry{
 
 
     public:
-        idtEntry(uint64_t isr_addr_low, uint16_t cs_selector, uint8_t attributes, uint8_t ist);
+        idtEntry();
 
-        void initEntry(uint64_t isr_addr);
+        void initEntry(uint64_t isr_addr, uint16_t cs_selector, uint8_t attributes, uint8_t ist);
 
         void getEntry(idt_entry* entry_buff);
 };
