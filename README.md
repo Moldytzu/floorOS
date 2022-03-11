@@ -2,7 +2,7 @@
 A monolitic kernel learning project
 
 
-#ROADMAP
+# ROADMAP
 1. debug and test paging
 2. rewrite paging and interrupts
 3. implement PIT
