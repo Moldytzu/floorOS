@@ -56,7 +56,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
     for(auto i = 0; i < memmap->entries; i++){
         for(auto j = 0; j < memmap->memmap[i].length; j += 4096){
             uint64_t addr = memmap->memmap[i].base + j;
-            pageManager.mapPage(addr, addr, 3);
+            pageManager.mapPage(addr, 0x2000000 + j, 3);
         }
     }
     
@@ -64,10 +64,13 @@ void _start(struct stivale2_struct *stivale2_struct) {
     for(auto i = 0; i < pmrs->entries; i++){
         for(auto j = 0; j < pmrs->pmrs[i].length; j += 4096){
             uint64_t addr = pmrs->pmrs[i].base + j;
-            pageManager.mapPage(addr, addr, 3);
+            pageManager.mapPage(addr, 0x2000000 + j, 3);
         }
     }
 
+    for(auto i = 0; i < 0x10000000; i += 4096){
+        pageManager.mapPage(0xffffffff80200000 + i, 0x2000000 + i, 3);
+    }
 
     //printf(itoa(memmap->entries, ""), 21);
 
@@ -76,6 +79,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
     pageManager.mapPage(0x3000, 0x300C, 3);
     printf(itoa(pageManager.translateAddr(0xffffffff80202027), ""), 20);
     pageManager.initCR3();
+    
     asm("hlt");
 }
 

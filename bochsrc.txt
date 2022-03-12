@@ -1,0 +1,4 @@
+ata0-slave: type=cdrom, path=output/kernel.iso, status=inserted
+boot: cdrom
+
+log: bochslog.txt
