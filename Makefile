@@ -6,7 +6,7 @@ kernel := output/kernel.elf
 iso := output/kernel.iso
 SOURCEDIR := /home/adam/osdev-stivale-test/src
 BUILDDIR := /home/adam/osdev-stivale-test/output
-DIRS = boot memoryManager common busComm idt
+DIRS = boot memoryManager common busComm idt time
 
 GCC_FLAGS ?= -O2 -g -Wall -Wextra -pipe -fno-stack-protector -fpermissive
 

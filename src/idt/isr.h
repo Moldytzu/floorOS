@@ -5,8 +5,8 @@
 
 void dummy_isr();
 
-
-__attribute__ ((interrupt))
-void dummy_isr_gp(void* dummy, uint64_t error);
+void divide_by_zero();
+// __attribute__ ((interrupt))
+// void dummy_isr_gp(void* dummy, uint64_t error);
 
 

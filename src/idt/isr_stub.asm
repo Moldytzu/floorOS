@@ -1,8 +1,11 @@
 bits 64
 
 extern _Z9dummy_isrv
+extern _Z14divide_by_zerov
+extern _Z14timer_callbackv
 global isr_no_err_stub_257
-
+global isr_divide_by_zero
+global isr_pit_irq
 
 
 %macro pushAll 0
@@ -57,6 +60,29 @@ isr_stub_%+%1:
     iretq
 %endmacro
 
+
+isr_divide_by_zero:
+    push 0
+    cld
+    pushAll
+    pushfq
+    call _Z14divide_by_zerov
+    popfq
+    popAll
+    pop rdi ; pop the interrupt code we pushed into the stack into the rdi register
+    iretq
+
+
+isr_pit_irq:
+    push 0
+    cld
+    pushAll
+    pushfq
+    call _Z14timer_callbackv
+    popfq
+    popAll
+    pop rdi ; pop the interrupt code we pushed into the stack into the rdi register
+    iretq
 
 isr_no_err_stub 0
 isr_no_err_stub 1

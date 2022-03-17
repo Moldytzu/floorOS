@@ -43,4 +43,8 @@ class idtTable{
         void createNewEntry(unsigned int int_vector, uint64_t isr_addr, uint8_t attributes, uint16_t cs_selector, uint8_t ist);
         
         void activateInterrupts();
+
+        void unmaskInterrupt(unsigned int int_vector);
+
+        void maskInterrupt(unsigned int int_vector);
 };

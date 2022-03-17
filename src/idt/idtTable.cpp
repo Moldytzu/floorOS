@@ -11,8 +11,8 @@ idtTable::idtTable(){
 
 
 void idtTable::initIDT(){
-    for(int i = 0; i<=31; i++){
-        createNewEntry(i, (uint64_t)isr_stub_table[i], 0x8e, 0x08, 0);
+    for(int i = 0; i<=33; i++){
+        createNewEntry(i, (uint64_t)dummy_isr, 0x8E, 0x28, 0);
     }
 }
 
@@ -23,6 +23,7 @@ void idtTable::createNewEntry(unsigned int int_vector, uint64_t isr_addr, uint8_
     }
 
     idt_object_table[int_vector].initEntry(isr_addr, cs_selector, attributes, ist);
+    unmaskInterrupt(int_vector);
 }
 
 
@@ -49,7 +50,7 @@ void idtTable::loadIDT(){
 void idtTable::activateInterrupts(){
     convertObjectToStruct();
     loadIDT();
-    activatePIC(0, 0);
+    activatePIC(0x20, 0x20);
     asm("sti");
 }
 
@@ -80,3 +81,24 @@ void idtTable::activatePIC(int master_offset, int slave_offset){
 }
 
 
+void idtTable::unmaskInterrupt(unsigned int int_vector){
+    portComm picMaster = portComm(0x21, 1);
+
+    if(int_vector < 8){
+        picMaster = portComm(0x21, 1);
+    }
+    else{
+        picMaster = portComm(0xA1, 1);
+        int_vector -= 8;
+    }
+
+    uint8_t value = picMaster.highSpeedRead();
+    value = value & ~(1 << int_vector);
+    picMaster.highSpeedWrite(value);
+}
+
+
+void idtTable::maskInterrupt(unsigned int int_vector){
+    portComm picMaster = portComm(0x21, 1);
+    return;
+}
