@@ -1,3 +1,6 @@
 *.d
 *.o
 *.elf
+bochslog.txt
+limine
+iso_dir

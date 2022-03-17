@@ -61,8 +61,7 @@ BUILD_DIR ?= ./output/
 all: $(kernel)
 
 clean:
-	rm -rf *.o *.d image.hdd iso_root
-	@mkdir -p output
+	rm -rf *.o *.d image.hdd iso_dir *.elf *.iso limine *.txt *.log output
 
 run: $(iso)
 	qemu-system-x86_64 -cdrom $(iso) -no-reboot -no-shutdown -d int -s -S -D qemu.log
@@ -73,22 +72,23 @@ debug: $(iso)
 
 iso: $(iso)
 
-$(iso): $(kernel) $(grub-cfg)
+$(iso): $(kernel) $(grub-cfg) limine
 	@mkdir -p iso_dir
 	@cp -v output/kernel.elf limine.cfg limine/limine.sys limine/limine-cd.bin limine/limine-eltorito-efi.bin iso_dir/
 	@xorriso -as mkisofs -b limine-cd.bin         -no-emul-boot -boot-load-size 4 -boot-info-table    --efi-boot limine-eltorito-efi.bin         -efi-boot-part --efi-boot-image --protective-msdos-label    iso_dir -o $(iso)
 
-$(kernel): $(linker_script) $(assembly_object_files) $(cpp_object_files) 
+$(kernel): $(linker_script) $(assembly_object_files) $(cpp_object_files)
+	@ mkdir -p output
 	ld $(LDFLAGS) $(INTERNALLDFLAGS) -o $(kernel) $(assembly_object_files) $(cpp_object_files)
-
-
 
 %.o: %.asm
 	@mkdir -p $(shell dirname $@)
 	@echo $(cpp_object_files)
 	nasm -felf64 -F dwarf -g -o $@ $<
 
-
+limine:
+	git clone https://github.com/limine-bootloader/limine.git --branch=v2.0-branch-binary --depth=1
+	make -C limine
 
 %.o: %.cpp
 	@mkdir -p $(shell dirname $@)
