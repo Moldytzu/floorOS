@@ -1,11 +1,11 @@
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-homepath := /home/adam/osdev-stivale-test/
+homepath := $(shell pwd)
 arch ?= x86_64
 kernel := output/kernel.elf
 iso := output/kernel.iso
-SOURCEDIR := /home/adam/osdev-stivale-test/src
-BUILDDIR := /home/adam/osdev-stivale-test/output
+SOURCEDIR := $(homepath)/src
+BUILDDIR := $(homepath)/output
 DIRS = boot memoryManager common busComm idt time
 
 GCC_FLAGS ?= -O2 -g -Wall -Wextra -pipe -fno-stack-protector -fpermissive
@@ -58,11 +58,10 @@ BUILD_DIR ?= ./output/
 
 
 .PHONY: all clean run iso
-
 all: $(kernel)
 
 clean:
-	rm -R $(cpp_object_files) $(assembly_object_files)
+	rm -rf *.o *.d image.hdd iso_root
 	@mkdir -p output
 
 run: $(iso)
