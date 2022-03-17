@@ -61,7 +61,7 @@ BUILD_DIR ?= ./output/
 all: $(kernel)
 
 clean:
-	rm -rf *.o *.d image.hdd iso_dir *.elf *.iso limine *.txt *.log output
+	rm -rf $(shell find . -type f -name "*.o") *.d image.hdd iso_dir *.elf *.iso limine *.txt *.log output
 
 run: $(iso)
 	qemu-system-x86_64 -cdrom $(iso) -no-reboot -no-shutdown -d int -s -S -D qemu.log
