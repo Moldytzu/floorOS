@@ -64,7 +64,10 @@ clean:
 	rm -rf $(shell find . -type f -name "*.o") *.d image.hdd iso_dir *.elf *.iso limine *.txt *.log output
 
 run: $(iso)
-	qemu-system-x86_64 -cdrom $(iso) -no-reboot -no-shutdown -d int -s -S -D qemu.log
+	qemu-system-x86_64 -M q35 -m 2G -cdrom $(iso)
+
+run-debug: $(iso)
+	qemu-system-x86_64 -M q35 -m 2G -cdrom $(iso) -no-reboot -no-shutdown -d int -s -S
 
 debug: $(iso)
 	@bochs -q
